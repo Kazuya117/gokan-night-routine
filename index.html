@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14100d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>五感ナイトルーティン</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="app">
+
+  <!-- 今夜 -->
+  <section id="view-tonight" class="view">
+    <header>
+      <p class="eyebrow" id="greeting">こんばんは</p>
+      <h1>今夜は、どの感覚で<br>眠りにいく？</h1>
+    </header>
+
+    <div id="sense-list" class="sense-list"></div>
+
+    <div class="card">
+      <h2>音</h2>
+      <div class="seg" id="sound-seg"></div>
+      <h2>長さ</h2>
+      <div class="seg" id="min-seg"></div>
+    </div>
+
+    <button id="start-btn" class="primary">おやすみモードを始める</button>
+    <p class="hint">始めたら、スマホを伏せて置くだけ。</p>
+  </section>
+
+  <!-- 朝チェック -->
+  <section id="view-morning" class="view" hidden>
+    <header>
+      <p class="eyebrow">朝の10秒チェック</p>
+      <h1 id="morning-title">ゆうべはどうだった？</h1>
+    </header>
+    <div class="card">
+      <h2>寝つき</h2>
+      <div class="scale" data-key="onset"></div>
+      <div class="scale-label"><span>悪かった</span><span>すぐ眠れた</span></div>
+      <h2>目覚めのすっきり度</h2>
+      <div class="scale" data-key="fresh"></div>
+      <div class="scale-label"><span>だるい</span><span>すっきり</span></div>
+      <h2>布団に入ってからスマホを触った？</h2>
+      <div class="seg" id="phone-seg">
+        <button data-v="no">触らなかった</button>
+        <button data-v="little">少しだけ</button>
+        <button data-v="yes">触った</button>
+      </div>
+    </div>
+    <button id="morning-save" class="primary">記録する</button>
+    <p class="hint" id="morning-hint"></p>
+  </section>
+
+  <!-- ふりかえり -->
+  <section id="view-review" class="view" hidden>
+    <header>
+      <p class="eyebrow">ふりかえり</p>
+      <h1>どの感覚が、<br>自分に効いている？</h1>
+    </header>
+    <div class="stats">
+      <div><b id="st-streak">0</b><span>連続達成（日）</span></div>
+      <div><b id="st-nights">0</b><span>記録した夜</span></div>
+      <div><b id="st-avg">–</b><span>平均スコア</span></div>
+    </div>
+    <div class="card">
+      <h2>感覚べつの睡眠スコア</h2>
+      <p class="note">その感覚を使った夜の平均（寝つき＋目覚め、10点満点）</p>
+      <div id="chart-sense"></div>
+    </div>
+    <div class="card">
+      <h2>直近14日</h2>
+      <p class="note">棒＝睡眠スコア　●＝スマホを触らなかった夜</p>
+      <div id="chart-days"></div>
+    </div>
+    <div class="card">
+      <h2>データ</h2>
+      <p class="note">記録はこの端末の中だけに保存されます。</p>
+      <div class="row">
+        <button id="csv-btn" class="ghost">CSVで書き出す</button>
+        <button id="demo-btn" class="ghost">サンプルデータ</button>
+        <button id="clear-btn" class="ghost danger">全消去</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav id="tabs">
+  <button data-view="tonight" class="on"><span>🌙</span>今夜</button>
+  <button data-view="morning"><span>☀️</span>朝チェック</button>
+  <button data-view="review"><span>📈</span>ふりかえり</button>
+</nav>
+
+<!-- おやすみモード（全画面） -->
+<div id="night" hidden>
+  <div id="orb"></div>
+  <p id="breath-text">吸って</p>
+  <p id="night-status">スマホを伏せて置こう</p>
+  <p id="night-time"></p>
+  <button id="stop-btn">終了する</button>
+</div>
+
+<div id="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
