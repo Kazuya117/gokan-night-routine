@@ -8,6 +8,11 @@ const SENSES = [
   { id: 'smell',   ico: '🌿', name: '嗅覚', tip: 'ラベンダーやヒノキなど、好きな香りを枕元に' },
   { id: 'taste',   ico: '🍵', name: '味覚', tip: '白湯やカフェインなしのお茶をひと口' },
 ];
+/* 振動に対応しているか（iPhoneのブラウザは非対応） */
+const CAN_VIBRATE = typeof navigator.vibrate === 'function' && !/iPhone|iPad|iPod/.test(navigator.userAgent);
+SENSES[1].tip = CAN_VIBRATE
+  ? '振動に合わせて呼吸する。ふるえている間に吸って、止まったら吐く'
+  : '音の高まりに合わせて呼吸する（この端末は振動に非対応のため、音でガイドします）';
 const SOUNDS = [['rain', '雨'], ['wave', '波'], ['deep', '低い音'], ['none', 'なし']];
 const MINUTES = [15, 30, 45];
 const KEY = 'gokan-v1';
@@ -64,11 +69,31 @@ $('#min-seg').addEventListener('click', (e) => {
 
 /* ---------- 音（Web Audioで生成。音声ファイル不要） ---------- */
 let actx = null, master = null;
+function getCtx() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!actx && AC) actx = new AC();
+  return actx;
+}
+/* 呼吸ガイド音：吸う4秒で音が高まり、吐く8秒で静かに消える。画面を見ずに呼吸を合わせられる */
+let tone = null;
+function startTone() {
+  if (!getCtx()) return;
+  const osc = actx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 110;
+  const g = actx.createGain(); g.gain.value = 0;
+  osc.connect(g).connect(actx.destination); osc.start();
+  tone = { osc, g };
+}
+function toneBreath(inhale) {
+  if (!tone || !actx) return;
+  const t = actx.currentTime, d = inhale ? 4 : 8;
+  tone.g.gain.cancelScheduledValues(t); tone.g.gain.setValueAtTime(tone.g.gain.value, t);
+  tone.g.gain.linearRampToValueAtTime(inhale ? 0.22 : 0.0001, t + d);
+  tone.osc.frequency.cancelScheduledValues(t); tone.osc.frequency.setValueAtTime(tone.osc.frequency.value, t);
+  tone.osc.frequency.linearRampToValueAtTime(inhale ? 165 : 110, t + d);
+}
 function startSound(kind) {
   if (kind === 'none') return;
-  const AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC) return;
-  actx = new AC();
+  if (!getCtx()) return;
   const len = actx.sampleRate * 4;
   const buf = actx.createBuffer(1, len, actx.sampleRate);
   const d = buf.getChannelData(0);
@@ -97,13 +122,18 @@ function startSound(kind) {
 function stopSound() {
   if (!actx) return;
   const a = actx; actx = null;
-  try { master.gain.cancelScheduledValues(a.currentTime); master.gain.setTargetAtTime(0, a.currentTime, 0.5); } catch (e) {}
+  if (tone) { try { tone.g.gain.setTargetAtTime(0, a.currentTime, 0.3); } catch (e) {} tone = null; }
+  try { if (master) master.gain.cancelScheduledValues(a.currentTime); master.gain.setTargetAtTime(0, a.currentTime, 0.5); } catch (e) {}
+  master = null;
   setTimeout(() => a.close().catch(() => {}), 2000);
 }
 
 /* ---------- おやすみモード ---------- */
 let ses = null;
 async function startNight() {
+  const touch = db.prefs.senses.includes('touch');
+  let vibOk = false;
+  if (touch && CAN_VIBRATE) { try { vibOk = navigator.vibrate(60) !== false; } catch (e) {} } // タップ直後に呼ぶ（ブラウザの制約）
   // iPhoneでは傾きセンサーの利用に許可が必要
   try {
     if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission();
@@ -111,9 +141,10 @@ async function startNight() {
   ses = {
     start: Date.now(), end: Date.now() + db.prefs.minutes * 60000,
     down: false, downSince: 0, downMs: 0, pickups: 0, sensor: false,
-    touch: db.prefs.senses.includes('touch'),
+    touch, vibOk,
   };
   startSound(db.prefs.senses.includes('hearing') ? db.prefs.sound : 'none');
+  if (touch && !vibOk) startTone();
   try { ses.lock = await navigator.wakeLock.request('screen'); } catch (e) {}
   window.addEventListener('deviceorientation', onTilt);
   $('#night').hidden = false; $('#night').classList.remove('down');
@@ -133,9 +164,10 @@ function breathe() { // 4秒吸って、8秒吐く
   if (!ses) return;
   const orb = $('#orb');
   orb.classList.remove('out'); orb.classList.add('in'); $('#breath-text').textContent = '吸って';
-  if (ses.touch && navigator.vibrate) navigator.vibrate(4000);
+  if (ses.vibOk) navigator.vibrate([350, 150, 350, 150, 350, 150, 350, 150, 350, 150, 350, 150, 350, 150, 350]); // 吸う4秒のあいだ、とくとくと振動
+  toneBreath(true);
   ses.b1 = setTimeout(() => {
-    orb.classList.add('out'); orb.classList.remove('in'); $('#breath-text').textContent = '吐いて';
+    orb.classList.add('out'); orb.classList.remove('in'); $('#breath-text').textContent = '吐いて'; toneBreath(false);
     ses.b2 = setTimeout(breathe, 8000);
   }, 4000);
 }
@@ -151,7 +183,7 @@ function endNight(completed) {
   if (!ses) return;
   clearInterval(ses.tick); clearTimeout(ses.b1); clearTimeout(ses.b2);
   window.removeEventListener('deviceorientation', onTilt);
-  if (navigator.vibrate) navigator.vibrate(0);
+  if (ses.vibOk) navigator.vibrate(0);
   if (ses.lock) ses.lock.release().catch(() => {});
   if (ses.down) ses.downMs += Date.now() - ses.downSince;
   stopSound();
