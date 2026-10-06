@@ -10,6 +10,7 @@ const SENSES = [
 ];
 /* 振動に対応しているか（iPhoneのブラウザは非対応） */
 const CAN_VIBRATE = typeof navigator.vibrate === 'function' && !/iPhone|iPad|iPod/.test(navigator.userAgent);
+SENSES[2].tip = '画面が夕暮れ色の灯りになり、3分かけてゆっくり消える。その間に部屋の明かりも消す';
 SENSES[1].tip = CAN_VIBRATE
   ? '振動に合わせて呼吸する。ふるえている間に吸って、止まったら吐く'
   : '音の高まりに合わせて呼吸する（この端末は振動に非対応のため、音でガイドします）';
@@ -147,7 +148,15 @@ async function startNight() {
   if (touch && !vibOk) startTone();
   try { ses.lock = await navigator.wakeLock.request('screen'); } catch (e) {}
   window.addEventListener('deviceorientation', onTilt);
-  $('#night').hidden = false; $('#night').classList.remove('down');
+  const n = $('#night'); n.classList.remove('down', 'sunset', 'fading');
+  const sight = db.prefs.senses.includes('sight');
+  $('#sight-msg').hidden = !sight;
+  n.hidden = false;
+  if (sight) { // 暖色の灯りで始まり、3分かけて暗闇へ
+    n.classList.add('sunset');
+    ses.s1 = setTimeout(() => { n.classList.remove('sunset'); n.classList.add('fading'); }, 1500);
+    ses.s2 = setTimeout(() => { n.classList.remove('fading'); $('#sight-msg').hidden = true; }, 182000);
+  }
   breathe(); ses.tick = setInterval(tick, 1000); tick();
 }
 function onTilt(e) {
@@ -181,7 +190,8 @@ function tick() {
 }
 function endNight(completed) {
   if (!ses) return;
-  clearInterval(ses.tick); clearTimeout(ses.b1); clearTimeout(ses.b2);
+  clearInterval(ses.tick); clearTimeout(ses.b1); clearTimeout(ses.b2); clearTimeout(ses.s1); clearTimeout(ses.s2);
+  $('#night').classList.remove('sunset', 'fading');
   window.removeEventListener('deviceorientation', onTilt);
   if (ses.vibOk) navigator.vibrate(0);
   if (ses.lock) ses.lock.release().catch(() => {});

@@ -99,6 +99,18 @@ button { font: inherit; color: inherit; cursor: pointer; }
   transition: background 1s;
 }
 #night.down { background: #000; }
+/* 視覚：夕暮れの灯り。暖色の光が3分かけて消えていく */
+#glow {
+  position: absolute; inset: 0; z-index: -1; opacity: 0; pointer-events: none;
+  background: radial-gradient(circle at 50% 38%, #e0913f 0%, #8a4514 50%, #1c0e05 100%);
+}
+#night { isolation: isolate; }
+#night.sunset #glow { opacity: 1; }
+#night.sunset { color: #fff3e0; }
+#night.sunset #stop-btn { color: #f3d9b8; border-color: #c99a66; }
+#night.fading #glow { opacity: 0; transition: opacity 180s linear; }
+#night.fading, #night.fading #stop-btn { transition: color 180s linear, border-color 180s linear; }
+#sight-msg { font-size: 15px; margin: 0 24px; line-height: 1.8; }
 #night.down > * { opacity: .25; }
 #orb {
   width: 150px; height: 150px; border-radius: 50%;
