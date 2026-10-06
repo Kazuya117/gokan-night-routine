@@ -17,9 +17,22 @@ SENSES[1].tip = CAN_VIBRATE
 const SOUNDS = [['rain', '雨'], ['wave', '波'], ['deep', '低い音'], ['none', 'なし']];
 const MINUTES = [15, 30, 45];
 const KEY = 'gokan-v1';
+const VERSION = 4; // 画面の「ふりかえり」下部に表示。更新が届いたかの確認用
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
+
+/* 古いHTMLがキャッシュに残っていても動くよう、足りない要素は補う */
+(function ensureNightParts() {
+  const n = document.querySelector('#night');
+  if (!document.querySelector('#glow')) { const g = document.createElement('div'); g.id = 'glow'; n.prepend(g); }
+  if (!document.querySelector('#sight-msg')) {
+    const m = document.createElement('p'); m.id = 'sight-msg'; m.hidden = true;
+    m.innerHTML = '部屋の明かりを消そう。<br>この灯りは3分かけて、ゆっくり消えます。';
+    document.querySelector('#glow').after(m);
+  }
+  const v = document.querySelector('#ver'); if (v) v.textContent = `（バージョン ${VERSION}）`;
+})();
 
 /* ---------- 保存 ---------- */
 let db = { records: {}, prefs: { senses: ['hearing'], sound: 'rain', minutes: 30 } };
@@ -332,4 +345,11 @@ refreshDot();
 const hour = new Date().getHours();
 show(hour >= 4 && hour < 12 && !score(db.records[nightKey()]) ? 'morning' : 'tonight');
 
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  // 新しい版が届いたら自動で1回だけ読み込み直す（おやすみモード中は除く）
+  const had = !!navigator.serviceWorker.controller; let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (had && !reloaded && !ses) { reloaded = true; location.reload(); }
+  });
+  navigator.serviceWorker.register('sw.js').then((r) => r.update()).catch(() => {});
+}

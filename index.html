@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 <main id="app">
@@ -82,7 +82,7 @@
     </div>
     <div class="card">
       <h2>データ</h2>
-      <p class="note">記録はこの端末の中だけに保存されます。</p>
+      <p class="note">記録はこの端末の中だけに保存されます。<span id="ver"></span></p>
       <div class="row">
         <button id="csv-btn" class="ghost">CSVで書き出す</button>
         <button id="demo-btn" class="ghost">サンプルデータ</button>
@@ -110,6 +110,6 @@
 </div>
 
 <div id="toast" hidden></div>
-<script src="app.js"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>
